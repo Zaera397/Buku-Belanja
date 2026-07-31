@@ -396,6 +396,21 @@
   <!-- ================= DASHBOARD ================= -->
   <section class="tab-panel active" id="panel-dashboard">
     <div class="stat-grid" id="statGrid"></div>
+      <div class="btn-row" style="margin:16px 0;">
+    <button class="btn primary" onclick="exportBackup()">
+      📤 Export Backup
+    </button>
+    <button class="btn" onclick="document.getElementById('backupFile').click()">
+      📥 Import Backup
+    </button>
+
+    <input
+      type="file"
+      id="backupFile"
+      accept=".json"
+      style="display:none"
+      onchange="importBackup(event)">
+  </div>
     <div class="grid-2">
       <div class="card">
         <h2 class="section-title" style="margin-top:0">Tren Pengeluaran Mingguan</h2>
@@ -832,9 +847,20 @@ function renderDashboard(){
 function renderDatabaseTab(){
   renderDatalists();
   const searchVal = (document.getElementById('dbSearch').value||'').toLowerCase();
-  const filtered = state.database.filter(i =>
-    i.nama.toLowerCase().includes(searchVal) || (i.tempat||'').toLowerCase().includes(searchVal)
-  );
+ const kategori = document.getElementById("filterKategori").value;
+
+ const filtered = state.database.filter(i => {
+
+  const matchSearch =
+      i.nama.toLowerCase().includes(searchVal) ||
+      i.kategori.toLowerCase().includes(searchVal) ||
+      (i.tempat || "").toLowerCase().includes(searchVal);
+
+  const matchKategori =
+      !kategori || i.kategori === kategori;
+
+  return matchSearch && matchKategori;
+});
   const byCat = {};
   filtered.forEach(i => { (byCat[i.kategori] ||= []).push(i); });
   const cats = Object.keys(byCat).sort();
@@ -876,6 +902,7 @@ function renderDatabaseTab(){
   }).join('');
 }
 document.getElementById('dbSearch').addEventListener('input', renderDatabaseTab);
+document.getElementById('filterKategori').addEventListener('change', renderDatabaseTab);
 
 function getTrend(item){
   if (!item.history || !item.history.length) return null;
@@ -1200,6 +1227,68 @@ function resetAllData(){
   showToast('Data direset ke awal');
 }
 
+/* ============================================================
+   BACKUP
+   ============================================================ */
+function exportBackup() {
+  const backup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    database: state.database,
+    entries: state.entries
+  };
+
+  const blob = new Blob(
+    [JSON.stringify(backup, null, 2)],
+    { type: "application/json" }
+  );
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `buku-belanja-backup-${todayStr()}.json`;
+  a.click();
+
+  URL.revokeObjectURL(a.href);
+}
+
+function importBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const backup = JSON.parse(e.target.result);
+
+      if (!backup.database || !backup.entries) {
+        showToast("File backup tidak valid.");
+        return;
+      }
+
+      if (!confirm("Timpa semua data sekarang?")) return;
+
+      state.database = backup.database;
+      state.entries = backup.entries;
+
+      saveDatabase();
+      saveEntries();
+
+      renderDashboard();
+      renderDatabaseTab();
+      renderEntryReceipt();
+      renderDatalists();
+
+      showToast("Backup berhasil dipulihkan!");
+    } catch (err) {
+      console.error(err);
+      showToast("File backup rusak.");
+    }
+  };
+
+  reader.readAsText(file);
+}  
+  
 /* ============================================================
    INIT
    ============================================================ */
