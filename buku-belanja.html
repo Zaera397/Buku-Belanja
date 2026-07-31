@@ -622,33 +622,55 @@ const SEED_DATABASE = [
   ["Anchor Butter Unsalted 200gr","BAHAN","DIVA",52500,"pcs"]
 ];
 
-async function loadState(){
-  try{
-    const dbRes = await window.storage.get('db-items');
-    state.database = dbRes ? JSON.parse(dbRes.value) : null;
-  }catch(e){ state.database = null; }
-  try{
-    const enRes = await window.storage.get('entries');
-    state.entries = enRes ? JSON.parse(enRes.value) : [];
-  }catch(e){ state.entries = []; }
+function loadState() {
+  try {
+    const dbRes = localStorage.getItem("db-items");
+    state.database = dbRes ? JSON.parse(dbRes) : null;
+  } catch (e) {
+    state.database = null;
+  }
 
-  if (!state.database){
+  try {
+    const enRes = localStorage.getItem("entries");
+    state.entries = enRes ? JSON.parse(enRes) : [];
+  } catch (e) {
+    state.entries = [];
+  }
+
+  if (!state.database) {
     const today = todayStr();
-    state.database = SEED_DATABASE.map(([nama,kategori,tempat,harga,satuan]) => ({
-      id: uid(), nama, kategori, tempat, harga, satuan, updatedAt: today, history: []
+    state.database = SEED_DATABASE.map(([nama, kategori, tempat, harga, satuan]) => ({
+      id: uid(),
+      nama,
+      kategori,
+      tempat,
+      harga,
+      satuan,
+      updatedAt: today,
+      history: []
     }));
-    await saveDatabase();
+
+    saveDatabase();
   }
 }
-async function saveDatabase(){
-  try{ await window.storage.set('db-items', JSON.stringify(state.database)); }
-  catch(e){ console.error('gagal simpan database', e); showToast('Gagal menyimpan database'); }
-}
-async function saveEntries(){
-  try{ await window.storage.set('entries', JSON.stringify(state.entries)); }
-  catch(e){ console.error('gagal simpan catatan', e); showToast('Gagal menyimpan catatan'); }
+
+function saveDatabase() {
+  try {
+    localStorage.setItem("db-items", JSON.stringify(state.database));
+  } catch (e) {
+    console.error("gagal simpan database", e);
+    showToast("Gagal menyimpan database");
+  }
 }
 
+function saveEntries() {
+  try {
+    localStorage.setItem("entries", JSON.stringify(state.entries));
+  } catch (e) {
+    console.error("gagal simpan catatan", e);
+    showToast("Gagal menyimpan catatan");
+  }
+}
 /* ============================================================
    TABS
    ============================================================ */
@@ -918,15 +940,15 @@ document.getElementById('itemForm').addEventListener('submit', async (e)=>{
   } else {
     state.database.push({ id: uid(), nama, kategori, tempat, satuan, harga, updatedAt: today, history: [] });
   }
-  await saveDatabase();
+  saveDatabase();
   closeItemModal();
   renderDatabaseTab();
   showToast('Barang tersimpan ke database ✓');
 });
-async function deleteItem(id){
+function deleteItem(id){
   if (!confirm('Hapus barang ini dari database? Catatan belanja yang sudah ada tetap aman.')) return;
   state.database = state.database.filter(i=>i.id!==id);
-  await saveDatabase();
+  saveDatabase();
   renderDatabaseTab();
   showToast('Barang dihapus dari database');
 }
@@ -1002,7 +1024,7 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
     item = { id: uid(), nama, kategori, tempat, satuan, harga, updatedAt: tanggal, history: [] };
     state.database.push(item);
   }
-  await saveDatabase();
+  saveDatabase();
 
   if (editingEntryId){
     const entry = state.entries.find(en=>en.id===editingEntryId);
@@ -1016,7 +1038,7 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
     state.entries.push({ id: uid(), createdAt: Date.now(), tanggal, itemId: item.id, nama, kategori, tempat, satuan, hargaSatuan: harga, qty, subtotal: harga*qty });
     showToast('Catatan belanja tersimpan ✓');
   }
-  await saveEntries();
+  saveEntries();
 
   const keepDate = tanggal;
   e.target.reset();
@@ -1051,10 +1073,10 @@ function cancelEditEntry(){
   document.getElementById('entryCancelBtn').style.display = 'none';
   document.getElementById('entryFormTitle').textContent = 'Tambah Catatan Belanja';
 }
-async function deleteEntry(id){
+function deleteEntry(id){
   if (!confirm('Hapus catatan belanja ini?')) return;
   state.entries = state.entries.filter(en=>en.id!==id);
-  await saveEntries();
+  saveEntries();
   renderEntryReceipt();
   renderDatabaseTab();
 }
@@ -1165,15 +1187,15 @@ function renderGrafikTab(){
 /* ============================================================
    RESET
    ============================================================ */
-async function resetAllData(){
+function resetAllData(){
   if (!confirm('Yakin hapus SEMUA data (database harga & catatan belanja)? Tindakan ini tidak bisa dibatalkan.')) return;
   const today = todayStr();
   state.database = SEED_DATABASE.map(([nama,kategori,tempat,harga,satuan]) => ({
     id: uid(), nama, kategori, tempat, harga, satuan, updatedAt: today, history: []
   }));
   state.entries = [];
-  await saveDatabase();
-  await saveEntries();
+  saveDatabase();
+  saveEntries();
   switchTab('dashboard');
   showToast('Data direset ke awal');
 }
@@ -1181,8 +1203,8 @@ async function resetAllData(){
 /* ============================================================
    INIT
    ============================================================ */
-(async function init(){
-  await loadState();
+(function init(){
+  loadState();
   document.getElementById('entryTanggal').value = todayStr();
   renderDashboard();
   renderDatalists();
