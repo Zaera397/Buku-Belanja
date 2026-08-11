@@ -895,22 +895,16 @@ function saveDatabase() {
 
 function saveEntries() {
   try {
-    localStorage.setItem(
-      "entries",
-      JSON.stringify(state.entries)
-    );
+    localStorage.setItem("entries", JSON.stringify(state.entries));
   } catch (e) {
-    console.error("Gagal simpan catatan", e);
+    console.error("gagal simpan catatan", e);
     showToast("Gagal menyimpan catatan");
   }
 }
 
 function saveIncomes() {
   try {
-    localStorage.setItem(
-      "incomes",
-      JSON.stringify(state.incomes)
-    );
+    localStorage.setItem("incomes", JSON.stringify(state.incomes));
   } catch (e) {
     console.error("Gagal menyimpan pemasukan", e);
     showToast("Gagal menyimpan pemasukan");
