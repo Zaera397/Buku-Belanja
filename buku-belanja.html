@@ -866,23 +866,6 @@ function loadState() {
   }
 }
 
-  if (!state.database) {
-    const today = todayStr();
-    state.database = SEED_DATABASE.map(([nama, kategori, tempat, harga, satuan]) => ({
-      id: uid(),
-      nama,
-      kategori,
-      tempat,
-      harga,
-      satuan,
-      updatedAt: today,
-      history: []
-    }));
-
-    saveDatabase();
-  }
-}
-
 function saveDatabase() {
   try {
     localStorage.setItem("db-items", JSON.stringify(state.database));
