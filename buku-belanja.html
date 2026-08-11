@@ -826,21 +826,45 @@ function loadState() {
     const dbRes = localStorage.getItem("db-items");
     state.database = dbRes ? JSON.parse(dbRes) : null;
   } catch (e) {
+    console.error("Gagal load database", e);
     state.database = null;
   }
 
   try {
     const enRes = localStorage.getItem("entries");
     state.entries = enRes ? JSON.parse(enRes) : [];
-    try {
-  const incomeRes = localStorage.getItem("incomes");
-  state.incomes = incomeRes ? JSON.parse(incomeRes) : [];
-} catch (e) {
-  state.incomes = [];
-}
   } catch (e) {
+    console.error("Gagal load catatan", e);
     state.entries = [];
   }
+
+  try {
+    const incomeRes = localStorage.getItem("incomes");
+    state.incomes = incomeRes ? JSON.parse(incomeRes) : [];
+  } catch (e) {
+    console.error("Gagal load pemasukan", e);
+    state.incomes = [];
+  }
+
+  if (!state.database) {
+    const today = todayStr();
+
+    state.database = SEED_DATABASE.map(
+      ([nama, kategori, tempat, harga, satuan]) => ({
+        id: uid(),
+        nama,
+        kategori,
+        tempat,
+        harga,
+        satuan,
+        updatedAt: today,
+        history: []
+      })
+    );
+
+    saveDatabase();
+  }
+}
 
   if (!state.database) {
     const today = todayStr();
@@ -868,8 +892,20 @@ function saveDatabase() {
   }
 }
 
+
 function saveEntries() {
-  function saveIncomes() {
+  try {
+    localStorage.setItem(
+      "entries",
+      JSON.stringify(state.entries)
+    );
+  } catch (e) {
+    console.error("Gagal simpan catatan", e);
+    showToast("Gagal menyimpan catatan");
+  }
+}
+
+function saveIncomes() {
   try {
     localStorage.setItem(
       "incomes",
@@ -878,13 +914,6 @@ function saveEntries() {
   } catch (e) {
     console.error("Gagal menyimpan pemasukan", e);
     showToast("Gagal menyimpan pemasukan");
-  }
-}
-  try {
-    localStorage.setItem("entries", JSON.stringify(state.entries));
-  } catch (e) {
-    console.error("gagal simpan catatan", e);
-    showToast("Gagal menyimpan catatan");
   }
 }
 /* ============================================================
@@ -2078,8 +2107,11 @@ function resetAllData(){
     id: uid(), nama, kategori, tempat, harga, satuan, updatedAt: today, history: []
   }));
   state.entries = [];
+  state.incomes = [];
+
   saveDatabase();
   saveEntries();
+  saveIncomes();
   switchTab('dashboard');
   showToast('Data direset ke awal');
 }
@@ -2089,11 +2121,12 @@ function resetAllData(){
    ============================================================ */
 function exportBackup() {
   const backup = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    database: state.database,
-    entries: state.entries
-  };
+  version: 2,
+  exportedAt: new Date().toISOString(),
+  database: state.database,
+  entries: state.entries,
+  incomes: state.incomes
+};
 
   const blob = new Blob(
     [JSON.stringify(backup, null, 2)],
@@ -2125,11 +2158,15 @@ function importBackup(event) {
 
       if (!confirm("Timpa semua data sekarang?")) return;
 
-      state.database = backup.database;
-      state.entries = backup.entries;
+     state.database = backup.database;
+state.entries = backup.entries;
+state.incomes = Array.isArray(backup.incomes)
+  ? backup.incomes
+  : [];
 
       saveDatabase();
-      saveEntries();
+saveEntries();
+saveIncomes();
 
       renderDashboard();
       renderDatabaseTab();
